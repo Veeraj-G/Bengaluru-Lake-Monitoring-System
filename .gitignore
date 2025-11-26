@@ -1,0 +1,12 @@
+# Ignore Satellite Images (Too big for GitHub)
+*.tif
+*.tiff
+*.json
+*.geojson
+
+# Ignore Python System Files
+__pycache__/
+*.pyc
+venv/
+.env
+.vscode/
