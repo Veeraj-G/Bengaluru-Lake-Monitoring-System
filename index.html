@@ -77,62 +77,82 @@
             <span id="source" class="value">---</span>
         </div>
 
-        <button onclick="fetchData()">🔄 Analyze Live Data</button>
+        <button onclick="updateSatelliteData()" style="background-color: #8e44ad; margin-bottom: 10px;">📡 Fetch Latest Satellite Image</button>
+        <button onclick="fetchAnalysis()">📊 Analyze Current Data</button>
     </div>
 
     <script>
-        async function fetchData() {
-            const btn = document.querySelector("button");
+        // FUNCTION 1: Download new image from Google
+        async function updateSatelliteData() {
+            const btn = document.querySelector("button[onclick='updateSatelliteData()']");
             const badge = document.getElementById("statusBadge");
             
-            btn.textContent = "Processing Satellite Image...";
-            btn.disabled = true; // Prevent double clicking
+            btn.textContent = "Downloading from Google Earth Engine...";
+            btn.disabled = true;
+            badge.textContent = "Downloading...";
             badge.style.backgroundColor = "#95a5a6";
-            badge.textContent = "Analyzing...";
 
             try {
-                // 1. Call the Python API
+                const response = await fetch("http://127.0.0.1:8000/update-satellite-data");
+                const data = await response.json();
+                
+                if (data.status === "success") {
+                    alert("✅ Success! New satellite image downloaded.");
+                    // Automatically run analysis after download
+                    fetchAnalysis();
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            } catch (error) {
+                alert("Connection Error");
+            }
+            
+            btn.textContent = "📡 Fetch Latest Satellite Image";
+            btn.disabled = false;
+        }
+
+        // FUNCTION 2: Analyze the downloaded image
+        async function fetchAnalysis() {
+            const btn = document.querySelector("button[onclick='fetchAnalysis()']");
+            const badge = document.getElementById("statusBadge");
+            
+            btn.textContent = "Processing...";
+            btn.disabled = true;
+
+            try {
                 const response = await fetch("http://127.0.0.1:8000/analyze/hebbal");
                 const data = await response.json();
 
-                // 2. Update the HTML with the JSON data
-                document.getElementById("lakeName").textContent = data.lake_name;
-                document.getElementById("area").textContent = data.area_hectares + " Hectares";
-                document.getElementById("ndti").textContent = data.avg_ndti;
-                document.getElementById("source").textContent = data.data_source;
-
-                // 3. Update Status Color
-               // Update the text to include "Status: "
-                // 3. Update Status Color & Text
-                badge.textContent = "Status: " + data.status;
-
-                if (data.status === "Clear") {
-                    // Green Style for Good Status
-                    badge.style.backgroundColor = "#27ae60";
-                    badge.style.color = "white";
-                    badge.style.border = "none";
+                if (data.error) {
+                    badge.textContent = "No Data Found";
+                    badge.style.backgroundColor = "#e74c3c";
+                    alert(data.error);
                 } else {
-                    // Neutral Style (White with Border) for Moderate/High
-                    badge.style.backgroundColor = "white";
-                    badge.style.color = "#2c3e50"; // Dark Grey Text
-                    badge.style.border = "2px solid #2c3e50"; // Dark Border
+                    document.getElementById("lakeName").textContent = data.lake_name;
+                    document.getElementById("area").textContent = data.area_hectares + " Hectares";
+                    document.getElementById("ndti").textContent = data.avg_ndti;
+                    document.getElementById("source").textContent = data.data_source;
+
+                    badge.textContent = "Status: " + data.status;
+                    if (data.status === "Clear") {
+                        badge.style.backgroundColor = "#27ae60";
+                        badge.style.color = "white";
+                        badge.style.border = "none";
+                    } else {
+                        badge.style.backgroundColor = "white";
+                        badge.style.color = "#2c3e50";
+                        badge.style.border = "2px solid #2c3e50";
+                    }
                 }
-
-                btn.textContent = "🔄 Analyze Again";
-                btn.disabled = false;
-
             } catch (error) {
                 console.error("Error:", error);
-                badge.textContent = "Connection Error";
-                badge.style.backgroundColor = "#e74c3c";
-                btn.textContent = "Retry";
-                btn.disabled = false;
             }
+            btn.textContent = "📊 Analyze Current Data";
+            btn.disabled = false;
         }
         
-        // Auto-load on open
-        fetchData();
+        // Load analysis on open
+        fetchAnalysis();
     </script>
-
 </body>
 </html>
