@@ -128,6 +128,16 @@
             font-family: 'Segoe UI', sans-serif;
         }
         .leaflet-popup-tip { background: #16213e; }
+
+        /* Legend Box Styling */
+        .legend {
+            background: white;
+            padding: 12px;
+            line-height: 1.5;
+            color: #333;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -150,6 +160,10 @@
         <div class="data-row">
             <span class="label">Water Area</span>
             <span id="area" class="value">---</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Surface Temp (LST)</span>
+            <span id="lst" class="value" style="color:#e67e22;">---</span>
         </div>
         <div class="data-row">
             <span class="label">Turbidity (NDTI)</span>
@@ -179,6 +193,42 @@
             minZoom: 11,
             zoomControl: false 
         }).setView([12.98, 77.60], 12);
+
+        var legend = L.control({ position: "bottomright" });
+
+        legend.onAdd = function(map) {
+        var div = L.DomUtil.create("div", "legend");
+        
+        // We use 'display: flex' to force the box and text to align perfectly
+        var itemStyle = 'display: flex; align-items: center; margin-bottom: 5px;';
+        var boxStyle = 'width: 18px; height: 18px; margin-right: 8px; border-radius: 3px; display: inline-block;';
+
+        div.innerHTML += '<h4 style="margin: 0 0 10px 0; font-family: Arial; font-size: 14px;">Health Status</h4>';
+        
+        // Row 1: High Risk
+        div.innerHTML += `<div style="${itemStyle}">
+                            <span style="${boxStyle} background: #ff0000;"></span>
+                            <span style="font-family: Arial; font-size: 12px;">High Algae Risk</span>
+                            </div>`;
+
+        // Row 2: Healthy
+        div.innerHTML += `<div style="${itemStyle}">
+                            <span style="${boxStyle} background: #28a745;"></span>
+                            <span style="font-family: Arial; font-size: 12px;">Healthy Water</span>
+                            </div>`;
+
+        // Row 3: Water Body
+        div.innerHTML += `<div style="${itemStyle}">
+                            <span style="${boxStyle} background: #007bff;"></span>
+                            <span style="font-family: Arial; font-size: 12px;">Water Body</span>
+                            </div>`;
+        
+        div.innerHTML += '<hr style="margin: 8px 0;"><small style="font-family: Arial; color: #666;"><i>Updated: Real-Time</i></small>';
+
+        return div;
+        };
+
+        legend.addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -272,6 +322,8 @@
                     badge.textContent = "ERROR";
                 } else {
                     document.getElementById("area").textContent = data.area_hectares + " Ha";
+                    document.getElementById("lst").textContent = data.avg_lst + " °C"; 
+                    document.getElementById("ndti").textContent = data.avg_ndti;
                     document.getElementById("ndti").textContent = data.avg_ndti;
                     document.getElementById("ndci").textContent = data.avg_ndci;
                     document.getElementById("mci").textContent = data.avg_mci;
