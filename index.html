@@ -237,7 +237,7 @@
             maxZoom: 19
         }).addTo(map);
 
-        // --- 2. DEFINE LAKES ---
+        // --- 2. DEFINE LAKES (Back to Pins) ---
         const lakes = [
             { name: "Hebbal Lake", lat: 13.0456, lng: 77.5833, id: "hebbal", active: true },
             { name: "Bellandur Lake", lat: 12.936, lng: 77.666, id: "bellandur", active: false },
@@ -290,29 +290,64 @@
             document.getElementById("ndci").textContent = "---";
             document.getElementById("mci").textContent = "---";
         }
-
         // --- 4. BACKEND LOGIC ---
+        
+        // BUTTON 1: ACQUIRE SATELLITE LINK
+        // Logic: Connects to GEE, downloads images, but DOES NOT scan yet.
         async function updateSatelliteData() {
             const btn = document.querySelector("#updateBtn");
             const badge = document.getElementById("statusBadge");
-            btn.textContent = "Establishing Link...";
+            
+            // UI Feedback: Loading State
+            btn.innerHTML = " Connecting...";
+            btn.disabled = true; // Prevent double clicking
+            
             badge.textContent = "DOWNLOADING...";
-            badge.style.backgroundColor = "#e67e22"; 
+            badge.style.backgroundColor = "#e67e22"; // Orange
 
             try {
+                // Call the Python Backend
                 const response = await fetch("http://127.0.0.1:8000/update-satellite-data");
                 const data = await response.json();
-                if (data.status === "success") fetchAnalysis();
-                else alert("Error: " + data.message);
-            } catch (error) { alert("Signal Lost (Backend Error)"); }
-            
-            btn.textContent = "Acquire Satellite Link";
+                
+                if (data.status === "success") {
+                    // Success State
+                    btn.innerHTML = "✅ Link Established";
+                    btn.style.background = "#28a745"; // Green
+                    
+                    badge.textContent = "DATA READY";
+                    badge.style.backgroundColor = "#2980b9"; // Blue
+                    
+                    // Alert user to next step
+                    alert("Satellite Link Established!\nNew Sentinel-2 & Landsat-9 data acquired.\n\nPlease click 'INITIALIZE SCAN' to process.");
+                } else {
+                    // Backend Error
+                    alert("Error: " + data.message);
+                    resetAcquireButton(btn);
+                }
+            } catch (error) { 
+                // Network Error
+                console.error(error);
+                alert("Signal Lost (Backend seems offline). Is main.py running?");
+                resetAcquireButton(btn);
+            }
         }
 
+        function resetAcquireButton(btn) {
+            btn.innerHTML = "Acquire Satellite Link";
+            btn.disabled = false;
+            btn.style.background = "#1f4068"; // Back to original blue
+            document.getElementById("statusBadge").textContent = "TARGET LOCKED";
+        }
+
+        // BUTTON 2: INITIALIZE SCAN
+        // Logic: Processes the downloaded images and updates the dashboard.
         async function fetchAnalysis() {
             const btn = document.querySelector("#analyzeBtn");
             const badge = document.getElementById("statusBadge");
-            btn.textContent = "Processing...";
+            
+            btn.innerHTML = "🔄 Processing...";
+            btn.disabled = true;
             
             try {
                 const response = await fetch("http://127.0.0.1:8000/analyze/hebbal");
@@ -320,26 +355,41 @@
 
                 if (data.error) {
                     badge.textContent = "ERROR";
+                    badge.style.backgroundColor = "#e74c3c";
+                    alert("Analysis Failed: " + data.error);
                 } else {
+                    // UPDATE DASHBOARD VALUES
                     document.getElementById("area").textContent = data.area_hectares + " Ha";
                     document.getElementById("lst").textContent = data.avg_lst + " °C"; 
-                    document.getElementById("ndti").textContent = data.avg_ndti;
                     document.getElementById("ndti").textContent = data.avg_ndti;
                     document.getElementById("ndci").textContent = data.avg_ndci;
                     document.getElementById("mci").textContent = data.avg_mci;
 
+                    // UPDATE BADGE COLOR & TEXT
                     badge.textContent = data.status.toUpperCase();
                     
                     let color = "#95a5a6";
-                    if (data.status === "Clear") color = "#27ae60";
-                    else if (data.status.includes("High")) color = "#e74c3c";
-                    else color = "#f1c40f";
+                    if (data.status === "Clear") color = "#27ae60";       // Green
+                    else if (data.status.includes("High")) color = "#e74c3c"; // Red
+                    else color = "#f1c40f"; // Yellow
 
                     badge.style.backgroundColor = color;
+                    
+                    // UPDATE INSIGHT TEXT
                     document.getElementById("conclusionText").innerHTML = data.conclusion;
+                    
+                    // Reset Button after delay
+                    btn.innerHTML = "✅ SCAN COMPLETE";
+                    setTimeout(() => { 
+                        btn.innerHTML = "Re-Initialize Scan"; 
+                        btn.disabled = false; 
+                    }, 3000);
                 }
-            } catch (error) { console.error(error); }
-            btn.textContent = "Initialize Scan";
+            } catch (error) { 
+                console.error(error); 
+                btn.innerHTML = "❌ Error";
+                btn.disabled = false;
+            }
         }
     </script>
 
