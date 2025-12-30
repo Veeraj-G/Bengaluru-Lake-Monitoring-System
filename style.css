@@ -1,0 +1,181 @@
+body { 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Segoe UI', sans-serif; 
+    background-color: #1a1a2e; 
+    overflow: hidden; 
+}
+
+/* 1. FULL SCREEN MAP */
+#map {
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+}
+
+/* 2. FLOATING DASHBOARD PANEL */
+.dashboard-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 380px;
+    background: rgba(22, 33, 62, 0.98); 
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid #2c3e50;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 1000;
+    color: white;
+    
+    /* Animation */
+    transform: translateX(-150%);
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.panel-visible {
+    transform: translateX(0);
+}
+
+/* --- FIXED & IMPROVED CLOSE BUTTON --- */
+.close-btn {
+    position: absolute;
+    top: 15px;       
+    right: 15px;     
+    width: 35px;     
+    height: 35px;    
+    background: rgba(255, 255, 255, 0.1); 
+    border-radius: 50%; 
+    border: none;
+    color: #bdc3c7;
+    font-size: 24px; 
+    line-height: 35px; 
+    text-align: center;
+    cursor: pointer;
+    z-index: 1001;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+.close-btn:hover { 
+    background: #e94560; 
+    color: white;
+    transform: rotate(90deg); 
+}
+
+/* TITLE & BADGES */
+h1 { 
+    color: #e94560; 
+    font-size: 22px; 
+    margin: 5px 0 5px 0; 
+    text-transform: uppercase; 
+    letter-spacing: 1px;
+    padding-right: 40px; 
+}
+
+.subtitle { color: #a0a0a0; font-size: 11px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+
+.status-badge { 
+    display: inline-block; 
+    padding: 6px 15px; 
+    border-radius: 4px; 
+    font-size: 12px;
+    font-weight: bold; 
+    color: white; 
+    background-color: #535c68; 
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.insight-box {
+    background-color: #0f3460;
+    border-left: 4px solid #e94560;
+    color: #ecf0f1;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: left;
+    font-size: 13px;
+    border-radius: 4px;
+    line-height: 1.4;
+    display: none; 
+}
+
+/* --- DATA TABLE STYLING --- */
+
+/* 1. Define the Grid for BOTH Header and Rows */
+.data-header, .data-row {
+    display: grid;
+    /* Ratio: 45% for Label, 27.5% for Detected, 27.5% for Normal */
+    grid-template-columns: 45% 1fr 1fr; 
+    align-items: center;
+    padding: 8px 0;
+}
+
+/* 2. Header Specifics */
+.data-header {
+    border-bottom: 2px solid #2c3e50;
+    margin-bottom: 10px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #7f8c8d;
+    letter-spacing: 1px;
+}
+
+/* 3. Row Specifics */
+.data-row {
+    border-bottom: 1px solid #1f4068;
+}
+
+/* --- STRICT COLUMN ALIGNMENT --- */
+
+/* Column 1: Parameter (Left Aligned) */
+.data-header span:nth-child(1),
+.data-row .label {
+    text-align: left;
+    padding-left: 2px;
+}
+
+/* Column 2: Detected (Center Aligned) */
+.data-header span:nth-child(2),
+.data-row .value {
+    text-align: center;
+}
+
+/* Column 3: Normal (Center Aligned) */
+.data-header span:nth-child(3),
+.data-row .standard {
+    text-align: center;
+}
+
+/* --- FONT STYLING --- */
+.label { color: #bdc3c7; font-size: 0.9em; }
+.value { font-weight: bold; color: #fff; font-family: 'Consolas', monospace; }
+.standard { color: #95a5a6; font-size: 0.8em; font-style: italic; }
+
+
+/* BUTTONS */
+button { 
+    background: #e94560; color: white; border: none; padding: 12px; 
+    border-radius: 5px; font-size: 13px; cursor: pointer; margin-top: 15px; 
+    width: 100%; transition: background 0.3s; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;
+}
+button:hover { background: #c0392b; }
+.btn-secondary { background-color: #1f4068; margin-top: 10px;}
+.btn-secondary:hover { background-color: #162447; }
+
+/* MAP POPUP & LEGEND */
+.leaflet-popup-content-wrapper {
+    background: #16213e;
+    color: white;
+    border-radius: 5px;
+    font-family: 'Segoe UI', sans-serif;
+}
+.leaflet-popup-tip { background: #16213e; }
+
+.legend {
+    background: white;
+    padding: 12px;
+    line-height: 1.5;
+    color: #333;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}

@@ -6,139 +6,8 @@
     <title>Bengaluru Lake Command Center</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background-color: #1a1a2e; overflow: hidden; }
-        
-        /* 1. FULL SCREEN MAP */
-        #map {
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-        }
-
-        /* 2. FLOATING DASHBOARD PANEL */
-        .dashboard-panel {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 380px;
-            background: rgba(22, 33, 62, 0.98); 
-            padding: 25px;
-            border-radius: 12px;
-            border: 1px solid #2c3e50;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            z-index: 1000;
-            color: white;
-            
-            /* Animation */
-            transform: translateX(-150%);
-            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        .panel-visible {
-            transform: translateX(0);
-        }
-
-        /* --- FIXED & IMPROVED CLOSE BUTTON --- */
-        .close-btn {
-            position: absolute;
-            top: 15px;       
-            right: 15px;     
-            width: 35px;     /* Defined Width */
-            height: 35px;    /* Defined Height */
-            background: rgba(255, 255, 255, 0.1); /* Subtle background */
-            border-radius: 50%; /* Perfect Circle */
-            border: none;
-            color: #bdc3c7;
-            font-size: 24px; 
-            line-height: 35px; /* Vertically Center text */
-            text-align: center;
-            cursor: pointer;
-            z-index: 1001;
-            padding: 0;
-            transition: all 0.2s ease;
-        }
-        .close-btn:hover { 
-            background: #e94560; /* Red Background on Hover */
-            color: white;
-            transform: rotate(90deg); /* Cool spin effect */
-        }
-
-        /* Adjusted Title to avoid overlap */
-        h1 { 
-            color: #e94560; 
-            font-size: 22px; 
-            margin: 5px 0 5px 0; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-            padding-right: 40px; /* Space for the button */
-        }
-        
-        .subtitle { color: #a0a0a0; font-size: 11px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
-
-        .status-badge { 
-            display: inline-block; 
-            padding: 6px 15px; 
-            border-radius: 4px; 
-            font-size: 12px;
-            font-weight: bold; 
-            color: white; 
-            background-color: #535c68; 
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-
-        .insight-box {
-            background-color: #0f3460;
-            border-left: 4px solid #e94560;
-            color: #ecf0f1;
-            padding: 12px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-size: 13px;
-            border-radius: 4px;
-            line-height: 1.4;
-            display: none; 
-        }
-
-        .data-row { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 10px 0; 
-            border-bottom: 1px solid #1f4068; 
-        }
-        
-        .label { color: #bdc3c7; font-size: 0.9em;}
-        .value { font-weight: bold; color: #fff; font-family: 'Consolas', monospace; }
-
-        button { 
-            background: #e94560; color: white; border: none; padding: 12px; 
-            border-radius: 5px; font-size: 13px; cursor: pointer; margin-top: 15px; 
-            width: 100%; transition: background 0.3s; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;
-        }
-        button:hover { background: #c0392b; }
-        .btn-secondary { background-color: #1f4068; margin-top: 10px;}
-        .btn-secondary:hover { background-color: #162447; }
-
-        /* Custom Popup Style */
-        .leaflet-popup-content-wrapper {
-            background: #16213e;
-            color: white;
-            border-radius: 5px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        .leaflet-popup-tip { background: #16213e; }
-
-        /* Legend Box Styling */
-        .legend {
-            background: white;
-            padding: 12px;
-            line-height: 1.5;
-            color: #333;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-        }
-    </style>
+    
+    <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
 
@@ -157,25 +26,36 @@
             <span id="conclusionText">Awaiting command...</span>
         </div>
 
+        <div class="data-header">
+            <span>Parameter</span>
+            <span>Detected</span>
+            <span>Normal</span>
+        </div>
+
         <div class="data-row">
             <span class="label">Water Area</span>
             <span id="area" class="value">---</span>
+            <span class="standard">Dynamic</span>
         </div>
         <div class="data-row">
-            <span class="label">Surface Temp (LST)</span>
+            <span class="label">Surface Temp</span>
             <span id="lst" class="value" style="color:#e67e22;">---</span>
+            <span class="standard">&lt; 27°C</span>
         </div>
         <div class="data-row">
             <span class="label">Turbidity (NDTI)</span>
             <span id="ndti" class="value">---</span>
+            <span class="standard">&lt; 0.1</span>
         </div>
         <div class="data-row">
-            <span class="label">Chlorophyll (NDCI)</span>
+            <span class="label">Chlorophyll</span>
             <span id="ndci" class="value">---</span>
+            <span class="standard">&lt; 0.1</span>
         </div>
         <div class="data-row" style="border-bottom: none;">
-            <span class="label">Algal Bloom (MCI)</span>
+            <span class="label">Algal Bloom</span>
             <span id="mci" class="value">---</span>
+            <span class="standard">&lt; 0.05</span>
         </div>
 
         <button onclick="fetchAnalysis()" id="analyzeBtn" style="display:none;">Initialize Scan</button>
@@ -237,7 +117,7 @@
             maxZoom: 19
         }).addTo(map);
 
-        // --- 2. DEFINE LAKES (Back to Pins) ---
+        // --- 2. DEFINE LAKES (Standard Pins) ---
         const lakes = [
             { name: "Hebbal Lake", lat: 13.0456, lng: 77.5833, id: "hebbal", active: true },
             { name: "Bellandur Lake", lat: 12.936, lng: 77.666, id: "bellandur", active: false },
@@ -262,7 +142,13 @@
             marker.on('click', function() {
                 panel.classList.add("panel-visible");
                 document.getElementById("lakeName").textContent = lake.name;
-                resetDataDisplay();
+                
+                // Reset to "---"
+                document.getElementById("area").textContent = "---";
+                document.getElementById("lst").textContent = "---";
+                document.getElementById("ndti").textContent = "---";
+                document.getElementById("ndci").textContent = "---";
+                document.getElementById("mci").textContent = "---";
 
                 if (lake.active) {
                     document.getElementById("statusBadge").textContent = "TARGET LOCKED";
@@ -284,49 +170,36 @@
             });
         });
 
-        function resetDataDisplay() {
-            document.getElementById("area").textContent = "---";
-            document.getElementById("ndti").textContent = "---";
-            document.getElementById("ndci").textContent = "---";
-            document.getElementById("mci").textContent = "---";
-        }
         // --- 4. BACKEND LOGIC ---
         
         // BUTTON 1: ACQUIRE SATELLITE LINK
-        // Logic: Connects to GEE, downloads images, but DOES NOT scan yet.
         async function updateSatelliteData() {
             const btn = document.querySelector("#updateBtn");
             const badge = document.getElementById("statusBadge");
             
-            // UI Feedback: Loading State
-            btn.innerHTML = " Connecting...";
-            btn.disabled = true; // Prevent double clicking
+            btn.innerHTML = "🛰️ Connecting...";
+            btn.disabled = true; 
             
             badge.textContent = "DOWNLOADING...";
-            badge.style.backgroundColor = "#e67e22"; // Orange
+            badge.style.backgroundColor = "#e67e22"; 
 
             try {
-                // Call the Python Backend
                 const response = await fetch("http://127.0.0.1:8000/update-satellite-data");
                 const data = await response.json();
                 
                 if (data.status === "success") {
-                    // Success State
                     btn.innerHTML = "✅ Link Established";
-                    btn.style.background = "#28a745"; // Green
+                    btn.style.background = "#28a745"; 
                     
                     badge.textContent = "DATA READY";
-                    badge.style.backgroundColor = "#2980b9"; // Blue
+                    badge.style.backgroundColor = "#2980b9"; 
                     
-                    // Alert user to next step
                     alert("Satellite Link Established!\nNew Sentinel-2 & Landsat-9 data acquired.\n\nPlease click 'INITIALIZE SCAN' to process.");
                 } else {
-                    // Backend Error
                     alert("Error: " + data.message);
                     resetAcquireButton(btn);
                 }
             } catch (error) { 
-                // Network Error
                 console.error(error);
                 alert("Signal Lost (Backend seems offline). Is main.py running?");
                 resetAcquireButton(btn);
@@ -336,12 +209,11 @@
         function resetAcquireButton(btn) {
             btn.innerHTML = "Acquire Satellite Link";
             btn.disabled = false;
-            btn.style.background = "#1f4068"; // Back to original blue
+            btn.style.background = "#1f4068"; 
             document.getElementById("statusBadge").textContent = "TARGET LOCKED";
         }
 
         // BUTTON 2: INITIALIZE SCAN
-        // Logic: Processes the downloaded images and updates the dashboard.
         async function fetchAnalysis() {
             const btn = document.querySelector("#analyzeBtn");
             const badge = document.getElementById("statusBadge");
@@ -358,27 +230,22 @@
                     badge.style.backgroundColor = "#e74c3c";
                     alert("Analysis Failed: " + data.error);
                 } else {
-                    // UPDATE DASHBOARD VALUES
                     document.getElementById("area").textContent = data.area_hectares + " Ha";
                     document.getElementById("lst").textContent = data.avg_lst + " °C"; 
                     document.getElementById("ndti").textContent = data.avg_ndti;
                     document.getElementById("ndci").textContent = data.avg_ndci;
                     document.getElementById("mci").textContent = data.avg_mci;
 
-                    // UPDATE BADGE COLOR & TEXT
                     badge.textContent = data.status.toUpperCase();
                     
                     let color = "#95a5a6";
-                    if (data.status === "Clear") color = "#27ae60";       // Green
-                    else if (data.status.includes("High")) color = "#e74c3c"; // Red
-                    else color = "#f1c40f"; // Yellow
+                    if (data.status === "Clear") color = "#27ae60";       
+                    else if (data.status.includes("High")) color = "#e74c3c"; 
+                    else color = "#f1c40f"; 
 
                     badge.style.backgroundColor = color;
-                    
-                    // UPDATE INSIGHT TEXT
                     document.getElementById("conclusionText").innerHTML = data.conclusion;
                     
-                    // Reset Button after delay
                     btn.innerHTML = "✅ SCAN COMPLETE";
                     setTimeout(() => { 
                         btn.innerHTML = "Re-Initialize Scan"; 
@@ -392,6 +259,5 @@
             }
         }
     </script>
-
 </body>
 </html>
