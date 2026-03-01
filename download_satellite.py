@@ -5,7 +5,7 @@ import os
 # --- CONFIGURATION ---
 # Use your specific Project ID
 PROJECT_ID = 'final-year-project-477507' 
-ROI_POINT = [77.5833, 13.0456] # Hebbal Lake
+# ROI_POINT = [77.5833, 13.0456] # Hebbal Lake
 
 def init_gee():
     try:
@@ -15,10 +15,9 @@ def init_gee():
         print("Failed to connect to GEE.")
         return False
 
-def download_sentinel_image():
-    """Fetches Sentinel-2 for Visuals, Turbidity & Chlorophyll (10m Res)"""
-    print("Searching for Sentinel-2 (Visual/Algae) data...")
-    roi = ee.Geometry.Point(ROI_POINT).buffer(1500).bounds()
+def download_sentinel_image(roi_point, filename):
+    print(f"Searching for Sentinel-2 data at {roi_point}...")
+    roi = ee.Geometry.Point(roi_point).buffer(1500).bounds()
     
     collection = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
                   .filterBounds(roi)
@@ -27,24 +26,16 @@ def download_sentinel_image():
                   .select(['B3', 'B4', 'B8', 'B11', 'B5', 'B6']))
 
     image = collection.first()
-    
     url = image.getDownloadURL({
-        'scale': 10,
-        'crs': 'EPSG:32643',
-        'region': roi,
-        'filePerBand': False,
-        'format': 'GEO_TIFF'
+        'scale': 10, 'crs': 'EPSG:32643', 'region': roi,
+        'filePerBand': False, 'format': 'GEO_TIFF'
     })
-    
-    return save_file(url, "Sentinel2_Hebbal_Lake_2024.tif")
+    return save_file(url, filename)
 
-def download_landsat_thermal():
-    """Fetches Landsat 9 for Surface Temperature (Thermal - 30m Res)"""
-    print("Searching for Landsat 9 (Thermal) data...")
-    roi = ee.Geometry.Point(ROI_POINT).buffer(1500).bounds()
+def download_landsat_thermal(roi_point, filename):
+    print(f"Searching for Landsat 9 data at {roi_point}...")
+    roi = ee.Geometry.Point(roi_point).buffer(1500).bounds()
 
-    # We use Landsat 9 Collection 2 Level 2
-    # ST_B10 is the Surface Temperature Band
     collection = (ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
                   .filterBounds(roi)
                   .filterDate('2024-01-01', '2024-12-31')
@@ -52,16 +43,11 @@ def download_landsat_thermal():
                   .select(['ST_B10'])) 
 
     image = collection.first()
-    
     url = image.getDownloadURL({
-        'scale': 30, # Landsat thermal is lower resolution (30m)
-        'crs': 'EPSG:32643',
-        'region': roi,
-        'filePerBand': False,
-        'format': 'GEO_TIFF'
+        'scale': 30, 'crs': 'EPSG:32643', 'region': roi,
+        'filePerBand': False, 'format': 'GEO_TIFF'
     })
-    
-    return save_file(url, "Landsat_Thermal_Hebbal_2024.tif")
+    return save_file(url, filename)
 
 def save_file(url, filename):
     try:
@@ -79,10 +65,10 @@ def save_file(url, filename):
         print(f"Error: {e}")
         return False
 
-def download_all():
+def download_all(roi_point, sentinel_file, landsat_file):
     if init_gee():
-        s1 = download_sentinel_image()
-        s2 = download_landsat_thermal()
+        s1 = download_sentinel_image(roi_point, sentinel_file)
+        s2 = download_landsat_thermal(roi_point, landsat_file)
         return s1 and s2
     return False
 

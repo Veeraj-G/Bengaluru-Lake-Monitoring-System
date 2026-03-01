@@ -77,52 +77,51 @@
         var legend = L.control({ position: "bottomright" });
 
         legend.onAdd = function(map) {
-        var div = L.DomUtil.create("div", "legend");
-        
-        // We use 'display: flex' to force the box and text to align perfectly
-        var itemStyle = 'display: flex; align-items: center; margin-bottom: 5px;';
-        var boxStyle = 'width: 18px; height: 18px; margin-right: 8px; border-radius: 3px; display: inline-block;';
+            var div = L.DomUtil.create("div", "legend");
+            
+            div.innerHTML += '<h4 style="margin: 0 0 10px 0; font-family: Arial; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Map Legend</h4>';
+            
+            // 1. NDCI Colorbar (As requested: 0 to 0.5 Red-Green)
+            div.innerHTML += '<b style="font-size: 12px;">NDCI (Algal Bloom Risk)</b><br>';
+            div.innerHTML += '<div style="background: linear-gradient(to right, red, #f1c40f, green); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
+            div.innerHTML += '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>0.0 (High)</span><span>0.5 (Safe)</span></div>';
 
-        div.innerHTML += '<h4 style="margin: 0 0 10px 0; font-family: Arial; font-size: 14px;">Health Status</h4>';
-        
-        // Row 1: High Risk
-        div.innerHTML += `<div style="${itemStyle}">
-                            <span style="${boxStyle} background: #ff0000;"></span>
-                            <span style="font-family: Arial; font-size: 12px;">High Algae Risk</span>
-                            </div>`;
+            // 2. LST Colorbar (As requested: 20 to 40°C Blue-Red)
+            div.innerHTML += '<b style="font-size: 12px;">LST (Surface Temperature)</b><br>';
+            div.innerHTML += '<div style="background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
+            div.innerHTML += '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>20°C (Normal)</span><span>40°C (Anomaly)</span></div>';
 
-        // Row 2: Healthy
-        div.innerHTML += `<div style="${itemStyle}">
-                            <span style="${boxStyle} background: #28a745;"></span>
-                            <span style="font-family: Arial; font-size: 12px;">Healthy Water</span>
-                            </div>`;
+            // 3. Water Body Marker
+            var itemStyle = 'display: flex; align-items: center; margin-bottom: 5px;';
+            var boxStyle = 'width: 14px; height: 14px; margin-right: 8px; border-radius: 3px; display: inline-block; background: #007bff; border: 1px solid #0056b3;';
+            div.innerHTML += `<div style="${itemStyle}">
+                                <span style="${boxStyle}"></span>
+                                <span style="font-family: Arial; font-size: 12px;">Water Body Mask</span>
+                              </div>`;
+            
+            div.innerHTML += '<hr style="margin: 10px 0 5px 0;"><small style="font-family: Arial; color: #888;"><i>Live API Data Feed</i></small>';
 
-        // Row 3: Water Body
-        div.innerHTML += `<div style="${itemStyle}">
-                            <span style="${boxStyle} background: #007bff;"></span>
-                            <span style="font-family: Arial; font-size: 12px;">Water Body</span>
-                            </div>`;
-        
-        div.innerHTML += '<hr style="margin: 8px 0;"><small style="font-family: Arial; color: #666;"><i>Updated: Real-Time</i></small>';
-
-        return div;
+            return div;
         };
 
         legend.addTo(map);
 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // CHANGED TO LIGHT MODE FOR BETTER VISIBILITY
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; CARTO',
             maxZoom: 19
         }).addTo(map);
 
-        // --- 2. DEFINE LAKES (Standard Pins) ---
+        // --- 2. DEFINE LAKES & TRACK SELECTION ---
         const lakes = [
             { name: "Hebbal Lake", lat: 13.0456, lng: 77.5833, id: "hebbal", active: true },
-            { name: "Bellandur Lake", lat: 12.936, lng: 77.666, id: "bellandur", active: false },
-            { name: "Ulsoor Lake", lat: 12.983, lng: 77.622, id: "ulsoor", active: false }
+            { name: "Bellandur Lake", lat: 12.936, lng: 77.666, id: "bellandur", active: true },
+            { name: "Ulsoor Lake", lat: 12.983, lng: 77.622, id: "ulsoor", active: true }
         ];
+
+        let currentLakeId = "hebbal"; // Variable to remember which lake we clicked
 
         // --- 3. HANDLE INTERACTIONS ---
         const panel = document.getElementById("dashboardPanel");
@@ -142,7 +141,16 @@
             marker.on('click', function() {
                 panel.classList.add("panel-visible");
                 document.getElementById("lakeName").textContent = lake.name;
-                
+                currentLakeId = lake.id;
+                // 1. Reset the Analyze Button
+                const aBtn = document.getElementById("analyzeBtn");
+                aBtn.innerHTML = "Initialize Scan";
+                aBtn.disabled = false;
+                // 2. Reset the Acquire Button
+                const uBtn = document.getElementById("updateBtn");
+                uBtn.innerHTML = "Acquire Satellite Link";
+                uBtn.disabled = false;
+                uBtn.style.background = "#1f4068";
                 // Reset to "---"
                 document.getElementById("area").textContent = "---";
                 document.getElementById("lst").textContent = "---";
@@ -184,7 +192,7 @@
             badge.style.backgroundColor = "#e67e22"; 
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/update-satellite-data");
+                const response = await fetch("http://127.0.0.1:8000/update-satellite-data/" + currentLakeId);
                 const data = await response.json();
                 
                 if (data.status === "success") {
@@ -222,7 +230,7 @@
             btn.disabled = true;
             
             try {
-                const response = await fetch("http://127.0.0.1:8000/analyze/hebbal");
+                const response = await fetch("http://127.0.0.1:8000/analyze/" + currentLakeId);
                 const data = await response.json();
 
                 if (data.error) {

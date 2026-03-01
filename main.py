@@ -5,6 +5,7 @@ import numpy as np
 from skimage.filters import threshold_otsu
 from rasterio.warp import reproject, Resampling  # <--- NEW IMPORT
 from download_satellite import download_all
+import os
 
 app = FastAPI()
 
@@ -17,9 +18,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- CONFIGURATION ---
-SENTINEL_FILE = "Sentinel2_Hebbal_Lake_2024.tif"
-LANDSAT_FILE = "Landsat_Thermal_Hebbal_2024.tif"
+# --- DYNAMIC CONFIGURATION ---
+LAKE_CONFIG = {
+    "hebbal": {
+        "name": "Hebbal Lake",
+        "sentinel": "Sentinel2_Hebbal_Lake_2024.tif",
+        "landsat": "Landsat_Thermal_Hebbal_2024.tif",
+        "coords": [77.5833, 13.0456] 
+    },
+    "bellandur": {
+        "name": "Bellandur Lake",
+        "sentinel": "Sentinel2_Bellandur_Lake_2024.tif",
+        "landsat": "Landsat_Thermal_Bellandur_2024.tif",
+        "coords": [77.666, 12.936] 
+    },
+    "ulsoor": {
+        "name": "Ulsoor Lake",
+        "sentinel": "Sentinel2_Ulsoor_Lake_2024.tif",
+        "landsat": "Landsat_Thermal_Ulsoor_2024.tif",
+        "coords": [77.622, 12.983]
+    }
+}
 
 # Band Mapping (Matches your GEE Export)
 B_GREEN = 1
@@ -29,30 +48,43 @@ B_SWIR  = 4
 B_RED_EDGE_1 = 5  
 B_RED_EDGE_2 = 6  
 
-@app.get("/update-satellite-data")
-def update_data():
-    """Button to re-download fresh data from GEE"""
-    success = download_all()
+@app.get("/update-satellite-data/{lake_id}")
+def update_data(lake_id: str):
+    if lake_id not in LAKE_CONFIG:
+        return {"status": "error", "message": "Lake not found."}
+        
+    config = LAKE_CONFIG[lake_id]
+    lake_name = config["name"]
+    
+    # Pass the specific coordinates and filenames to the downloader
+    success = download_all(config["coords"], config["sentinel"], config["landsat"])
+    
     if success:
-        return {"status": "success", "message": "Sentinel-2 and Landsat-9 data downloaded."}
+        return {"status": "success", "message": f"Satellite data acquired for {lake_name}."}
     else:
         return {"status": "error", "message": "Download failed."}
 
-@app.get("/analyze/hebbal")
-def analyze_hebbal():
-    print("--- STARTING ANALYSIS ---")
+@app.get("/analyze/{lake_id}")
+def analyze_lake(lake_id: str):
+    if lake_id not in LAKE_CONFIG:
+        return {"error": "Target lake not found in database."}
+        
+    config = LAKE_CONFIG[lake_id]
+    lake_name = config["name"]
+    sentinel_path = config["sentinel"]
+    landsat_path = config["landsat"]
     
-    # Variables to hold Sentinel metadata for alignment
-    sentinel_transform = None
-    sentinel_crs = None
-    sentinel_shape = None
-    water_mask = None
+    # Check if the files actually exist before trying to process them
+    if not os.path.exists(sentinel_path) or not os.path.exists(landsat_path):
+        return {"error": f"Satellite telemetry offline for {lake_name}. Files missing."}
+
+    print(f"--- STARTING ANALYSIS FOR {lake_name.upper()} ---")
 
     # ---------------------------------------------------------
     # PART 1: SENTINEL-2 ANALYSIS (Visuals, Algae, Turbidity)
     # ---------------------------------------------------------
     try:
-        with rasterio.open(SENTINEL_FILE) as src:
+        with rasterio.open(sentinel_path) as src:
             # Capture metadata for Part 2
             sentinel_transform = src.transform
             sentinel_crs = src.crs
@@ -99,7 +131,7 @@ def analyze_hebbal():
     # ---------------------------------------------------------
     avg_temp_c = 0.0
     try:
-        with rasterio.open(LANDSAT_FILE) as src_landsat:
+        with rasterio.open(landsat_path) as src_landsat:
             # 1. Read Raw Thermal Data
             st_band = src_landsat.read(1)
             
@@ -143,24 +175,38 @@ def analyze_hebbal():
     status = "Moderate"
     conclusion = "Analysis pending."
 
+    # --- DYNAMIC INSIGHTS ENGINE ---
     if avg_chlorophyll > 0.1:
         status = "High Algae Risk"
-        conclusion = (
-            f"High biological activity detected (NDCI: {avg_chlorophyll:.3f}). "
-            f"Surface temperature is <b>{avg_temp_c:.1f}°C</b>. "
-            "Warm water accelerates algae growth. Likely cause: Sewage inflow."
-        )
+        
+        # Custom insight for Bellandur's specific history
+        if lake_name == "Bellandur Lake":
+            conclusion = f"Severe eutrophication (NDCI: {avg_chlorophyll:.3f}). Bellandur's historical nutrient loading combined with {avg_temp_c:.1f}°C surface temp is fueling rapid algal blooms. Immediate aeration recommended."
+        
+        # Insight if both Temp and Algae are high
+        elif avg_temp_c > 30.0:
+            conclusion = f"Thermal anomaly ({avg_temp_c:.1f}°C) detected alongside high chlorophyll. Warm water is actively accelerating algal reproduction. Suspected cause: Urban heat island effect & sewage inflow."
+        
+        # Insight if Turbidity and Algae are high
+        elif avg_turbidity > 0.05:
+            conclusion = f"High biological activity (NDCI: {avg_chlorophyll:.3f}) coupled with elevated turbidity. Indicates heavy suspended particulate matter and dangerous nutrient runoff."
+        
+        # Fallback for standard high algae
+        else:
+            conclusion = f"Chlorophyll levels exceed safe thresholds (NDCI: {avg_chlorophyll:.3f}). Regular monitoring required to prevent full-scale eutrophication."
+
     elif avg_turbidity > 0.1:
         status = "High Turbidity"
-        conclusion = "Water contains high sediment/mud levels. Likely due to runoff."
+        conclusion = f"Elevated turbidity levels detected (NDTI: {avg_turbidity:.3f}). Water clarity is significantly compromised, likely due to recent urban runoff or unchecked sediment discharge."
+
     else:
         status = "Clear"
-        conclusion = f"Lake health is stable. Surface temperature is normal at <b>{avg_temp_c:.1f}°C</b>."
+        conclusion = f"Lake parameters are within normal thresholds. Surface temperature is stable at {avg_temp_c:.1f}°C with negligible biological hazard."
 
     print(f"Analysis Complete. Temp: {avg_temp_c}")
 
     return {
-        "lake_name": "Hebbal Lake",
+        "lake_name": lake_name,
         "area_hectares": round(area_ha, 2),
         "avg_ndti": round(avg_turbidity, 4),
         "avg_ndci": round(avg_chlorophyll, 4),
