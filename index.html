@@ -1,271 +1,327 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bengaluru Lake Command Center</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <link rel="stylesheet" href="style.css"> 
-</head>
-<body>
 
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <div id="map"></div>
 
+    <div id="master-control-panel" class="control-panel">
+      <h2>BENGALURU CITY</h2>
+      <p>Status: <span id="satellite-status">Waiting for Data Sync</span></p>
+      <button id="global-link-btn" class="btn-primary" onclick="establishGlobalLink()">
+        ACQUIRE SATELLITE LINK
+      </button>
+    </div>
+
     <div id="dashboardPanel" class="dashboard-panel">
-        <button class="close-btn" onclick="closePanel()">&times;</button>
-        
-        <h1 id="lakeName">Lake Selector</h1>
-        <div class="subtitle">Command Center v1.0</div>
+      <button class="close-btn" onclick="closePanel()">&times;</button>
 
-        <div id="statusBadge" class="status-badge">Standby</div>
+      <h1 id="lakeName">Lake Selector</h1>
+      <div class="subtitle">Command Center v1.0</div>
 
-        <div id="insightBox" class="insight-box">
-            <span style="color:#e94560; font-weight:bold;">Insight:</span>
-            <span id="conclusionText">Awaiting command...</span>
-        </div>
+      <div id="statusBadge" class="status-badge">Standby</div>
 
-        <div class="data-header">
-            <span>Parameter</span>
-            <span>Detected</span>
-            <span>Normal</span>
-        </div>
+      <div id="insightBox" class="insight-box">
+        <span style="color: #e94560; font-weight: bold">Insight:</span>
+        <span id="conclusionText">Awaiting command...</span>
+      </div>
 
-        <div class="data-row">
-            <span class="label">Water Area</span>
-            <span id="area" class="value">---</span>
-            <span class="standard">Dynamic</span>
-        </div>
-        <div class="data-row">
-            <span class="label">Surface Temp</span>
-            <span id="lst" class="value" style="color:#e67e22;">---</span>
-            <span class="standard">&lt; 27°C</span>
-        </div>
-        <div class="data-row">
-            <span class="label">Turbidity (NDTI)</span>
-            <span id="ndti" class="value">---</span>
-            <span class="standard">&lt; 0.1</span>
-        </div>
-        <div class="data-row">
-            <span class="label">Chlorophyll</span>
-            <span id="ndci" class="value">---</span>
-            <span class="standard">&lt; 0.1</span>
-        </div>
-        <div class="data-row" style="border-bottom: none;">
-            <span class="label">Algal Bloom</span>
-            <span id="mci" class="value">---</span>
-            <span class="standard">&lt; 0.05</span>
-        </div>
+      <div class="data-header">
+        <span>Parameter</span>
+        <span>Detected</span>
+        <span>Normal</span>
+      </div>
 
-        <button onclick="fetchAnalysis()" id="analyzeBtn" style="display:none;">Initialize Scan</button>
-        <button onclick="updateSatelliteData()" id="updateBtn" class="btn-secondary" style="display:none;">Acquire Satellite Link</button>
+      <div class="data-row">
+        <span class="label">Water Area</span>
+        <span id="area" class="value">---</span>
+        <span class="standard">Dynamic</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Surface Temp</span>
+        <span id="lst" class="value" style="color: #e67e22">---</span>
+        <span class="standard">&lt; 27°C</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Turbidity (NDTI)</span>
+        <span id="ndti" class="value">---</span>
+        <span class="standard">&lt; 0.1</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Chlorophyll</span>
+        <span id="ndci" class="value">---</span>
+        <span class="standard">&lt; 0.1</span>
+      </div>
+      <div class="data-row" style="border-bottom: none">
+        <span class="label">Algal Bloom</span>
+        <span id="mci" class="value">---</span>
+        <span class="standard">&lt; 0.05</span>
+      </div>
+
+      <button onclick="fetchAnalysis()" id="analyzeBtn" style="display: none">
+        Initialize Scan
+      </button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- 1. INITIALIZE MAP ---
-        var bounds = [[12.834012, 77.460102], [13.143664, 77.784143]];
+        let satelliteLinked = false;
+      // --- 1. INITIALIZE MAP ---
+      var bounds = [
+        [12.834012, 77.460102],
+        [13.143664, 77.784143],
+      ];
 
-        var map = L.map('map', {
-            maxBounds: bounds,
-            minZoom: 11,
-            zoomControl: false 
-        }).setView([12.98, 77.60], 12);
+      var map = L.map("map", {
+        maxBounds: bounds,
+        minZoom: 11,
+        zoomControl: false,
+      }).setView([12.98, 77.6], 12);
 
-        var legend = L.control({ position: "bottomright" });
+      var legend = L.control({ position: "bottomright" });
 
-        legend.onAdd = function(map) {
-            var div = L.DomUtil.create("div", "legend");
-            
-            div.innerHTML += '<h4 style="margin: 0 0 10px 0; font-family: Arial; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Map Legend</h4>';
-            
-            // 1. NDCI Colorbar (As requested: 0 to 0.5 Red-Green)
-            div.innerHTML += '<b style="font-size: 12px;">NDCI (Algal Bloom Risk)</b><br>';
-            div.innerHTML += '<div style="background: linear-gradient(to right, red, #f1c40f, green); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
-            div.innerHTML += '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>0.0 (High)</span><span>0.5 (Safe)</span></div>';
+      legend.onAdd = function (map) {
+        var div = L.DomUtil.create("div", "legend");
 
-            // 2. LST Colorbar (As requested: 20 to 40°C Blue-Red)
-            div.innerHTML += '<b style="font-size: 12px;">LST (Surface Temperature)</b><br>';
-            div.innerHTML += '<div style="background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
-            div.innerHTML += '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>20°C (Normal)</span><span>40°C (Anomaly)</span></div>';
+        div.innerHTML +=
+          '<h4 style="margin: 0 0 10px 0; font-family: Arial; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Map Legend</h4>';
 
-            // 3. Water Body Marker
-            var itemStyle = 'display: flex; align-items: center; margin-bottom: 5px;';
-            var boxStyle = 'width: 14px; height: 14px; margin-right: 8px; border-radius: 3px; display: inline-block; background: #007bff; border: 1px solid #0056b3;';
-            div.innerHTML += `<div style="${itemStyle}">
+        // 1. NDCI Colorbar (As requested: 0 to 0.5 Red-Green)
+        div.innerHTML +=
+          '<b style="font-size: 12px;">NDCI (Algal Bloom Risk)</b><br>';
+        div.innerHTML +=
+          '<div style="background: linear-gradient(to right, red, #f1c40f, green); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
+        div.innerHTML +=
+          '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>0.0 (High)</span><span>0.5 (Safe)</span></div>';
+
+        // 2. LST Colorbar (As requested: 20 to 40°C Blue-Red)
+        div.innerHTML +=
+          '<b style="font-size: 12px;">LST (Surface Temperature)</b><br>';
+        div.innerHTML +=
+          '<div style="background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c); width: 100%; height: 12px; border-radius: 4px; margin: 5px 0; border: 1px solid #999;"></div>';
+        div.innerHTML +=
+          '<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:12px; color: #555;"><span>20°C (Normal)</span><span>40°C (Anomaly)</span></div>';
+
+        // 3. Water Body Marker
+        var itemStyle =
+          "display: flex; align-items: center; margin-bottom: 5px;";
+        var boxStyle =
+          "width: 14px; height: 14px; margin-right: 8px; border-radius: 3px; display: inline-block; background: #007bff; border: 1px solid #0056b3;";
+        div.innerHTML += `<div style="${itemStyle}">
                                 <span style="${boxStyle}"></span>
                                 <span style="font-family: Arial; font-size: 12px;">Water Body Mask</span>
                               </div>`;
-            
-            div.innerHTML += '<hr style="margin: 10px 0 5px 0;"><small style="font-family: Arial; color: #888;"><i>Live API Data Feed</i></small>';
 
-            return div;
-        };
+        div.innerHTML +=
+          '<hr style="margin: 10px 0 5px 0;"><small style="font-family: Arial; color: #888;"><i>Live API Data Feed</i></small>';
 
-        legend.addTo(map);
+        return div;
+      };
 
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+      legend.addTo(map);
 
-        // CHANGED TO LIGHT MODE FOR BETTER VISIBILITY
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CARTO',
-            maxZoom: 19
-        }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
 
-        // --- 2. DEFINE LAKES & TRACK SELECTION ---
-        const lakes = [
-            { name: "Hebbal Lake", lat: 13.0456, lng: 77.5833, id: "hebbal", active: true },
-            { name: "Bellandur Lake", lat: 12.936, lng: 77.666, id: "bellandur", active: true },
-            { name: "Ulsoor Lake", lat: 12.983, lng: 77.622, id: "ulsoor", active: true }
-        ];
+      // CHANGED TO LIGHT MODE FOR BETTER VISIBILITY
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        {
+          attribution: "&copy; CARTO",
+          maxZoom: 19,
+        },
+      ).addTo(map);
 
-        let currentLakeId = "hebbal"; // Variable to remember which lake we clicked
+      // --- 2. DEFINE LAKES & TRACK SELECTION ---
+      const lakes = [
+        {
+          name: "Hebbal Lake",
+          lat: 13.0456,
+          lng: 77.5833,
+          id: "hebbal",
+          active: true,
+        },
+        {
+          name: "Bellandur Lake",
+          lat: 12.936,
+          lng: 77.666,
+          id: "bellandur",
+          active: true,
+        },
+        {
+          name: "Ulsoor Lake",
+          lat: 12.983,
+          lng: 77.622,
+          id: "ulsoor",
+          active: true,
+        },
+      ];
 
-        // --- 3. HANDLE INTERACTIONS ---
-        const panel = document.getElementById("dashboardPanel");
+      let currentLakeId = "hebbal"; // Variable to remember which lake we clicked
 
-        function closePanel() {
-            panel.classList.remove("panel-visible");
-        }
+      // --- 3. HANDLE INTERACTIONS ---
+      const panel = document.getElementById("dashboardPanel");
 
-        lakes.forEach(lake => {
-            var marker = L.marker([lake.lat, lake.lng]).addTo(map);
-            
-            marker.bindTooltip(lake.name, {
-                permanent: false, 
-                direction: 'top'
-            });
+      function closePanel() {
+        panel.classList.remove("panel-visible");
+      }
 
-            marker.on('click', function() {
-                panel.classList.add("panel-visible");
-                document.getElementById("lakeName").textContent = lake.name;
-                currentLakeId = lake.id;
-                // 1. Reset the Analyze Button
-                const aBtn = document.getElementById("analyzeBtn");
-                aBtn.innerHTML = "Initialize Scan";
-                aBtn.disabled = false;
-                // 2. Reset the Acquire Button
-                const uBtn = document.getElementById("updateBtn");
-                uBtn.innerHTML = "Acquire Satellite Link";
-                uBtn.disabled = false;
-                uBtn.style.background = "#1f4068";
-                // Reset to "---"
-                document.getElementById("area").textContent = "---";
-                document.getElementById("lst").textContent = "---";
-                document.getElementById("ndti").textContent = "---";
-                document.getElementById("ndci").textContent = "---";
-                document.getElementById("mci").textContent = "---";
+      lakes.forEach((lake) => {
+        var marker = L.marker([lake.lat, lake.lng]).addTo(map);
 
-                if (lake.active) {
-                    document.getElementById("statusBadge").textContent = "TARGET LOCKED";
-                    document.getElementById("statusBadge").style.backgroundColor = "#2980b9";
-                    document.getElementById("conclusionText").textContent = "Target acquired. Ready to initiate satellite analysis.";
-                    document.getElementById("insightBox").style.display = "block";
-                    document.getElementById("analyzeBtn").style.display = "block";
-                    document.getElementById("updateBtn").style.display = "block";
-                } else {
-                    document.getElementById("statusBadge").textContent = "OFFLINE";
-                    document.getElementById("statusBadge").style.backgroundColor = "#95a5a6";
-                    document.getElementById("conclusionText").textContent = "Telemetry offline. Pipeline under construction.";
-                    document.getElementById("insightBox").style.display = "block";
-                    document.getElementById("analyzeBtn").style.display = "none";
-                    document.getElementById("updateBtn").style.display = "none";
-                }
-
-                map.flyTo([lake.lat, lake.lng], 14, { duration: 1.5 });
-            });
+        marker.bindTooltip(lake.name, {
+          permanent: false,
+          direction: "top",
         });
 
-        // --- 4. BACKEND LOGIC ---
-        
-        // BUTTON 1: ACQUIRE SATELLITE LINK
-        async function updateSatelliteData() {
-            const btn = document.querySelector("#updateBtn");
-            const badge = document.getElementById("statusBadge");
-            
-            btn.innerHTML = "🛰️ Connecting...";
-            btn.disabled = true; 
-            
-            badge.textContent = "DOWNLOADING...";
-            badge.style.backgroundColor = "#e67e22"; 
+        marker.on("click", function () {
+          if (!satelliteLinked) {
+            alert("Please Acquire Bengaluru City Satellite Link first!");
+            return;
+          }  
+          panel.classList.add("panel-visible");
+          document.getElementById("lakeName").textContent = lake.name;
+          currentLakeId = lake.id;
+          // 1. Reset the Analyze Button
+          const aBtn = document.getElementById("analyzeBtn");
+          aBtn.innerHTML = "Initialize Scan";
+          aBtn.disabled = false;
+          // Reset to "---"
+          document.getElementById("area").textContent = "---";
+          document.getElementById("lst").textContent = "---";
+          document.getElementById("ndti").textContent = "---";
+          document.getElementById("ndci").textContent = "---";
+          document.getElementById("mci").textContent = "---";
 
-            try {
-                const response = await fetch("http://127.0.0.1:8000/update-satellite-data/" + currentLakeId);
-                const data = await response.json();
-                
-                if (data.status === "success") {
-                    btn.innerHTML = "✅ Link Established";
-                    btn.style.background = "#28a745"; 
+          if (lake.active) {
+            document.getElementById("statusBadge").textContent =
+              "WATER BODY SELECTED";
+            document.getElementById("statusBadge").style.backgroundColor =
+              "#2980b9";
+            document.getElementById("conclusionText").textContent =
+              "Ready to process latest satellite imagery.";
+            document.getElementById("insightBox").style.display = "block";
+            document.getElementById("analyzeBtn").style.display = "block";
+          } else {
+            document.getElementById("statusBadge").textContent = "OFFLINE";
+            document.getElementById("statusBadge").style.backgroundColor =
+              "#95a5a6";
+            document.getElementById("conclusionText").textContent =
+              "Data currently unavailable for this water body.";
+            document.getElementById("insightBox").style.display = "block";
+            document.getElementById("analyzeBtn").style.display = "none";
+          }
+
+          map.flyTo([lake.lat, lake.lng], 14, { duration: 1.5 });
+        });
+      });
+
+      // --- 4. BACKEND LOGIC ---
+
+
+      // BUTTON 2: INITIALIZE SCAN
+      async function fetchAnalysis() {
+        const btn = document.querySelector("#analyzeBtn");
+        const badge = document.getElementById("statusBadge");
+
+        btn.innerHTML = "🔄 Processing...";
+        btn.disabled = true;
+
+        try {
+          const response = await fetch(
+            "http://127.0.0.1:8000/analyze/" + currentLakeId,
+          );
+          const data = await response.json();
+
+          if (data.error) {
+            badge.textContent = "ERROR";
+            badge.style.backgroundColor = "#e74c3c";
+            alert("Analysis Failed: " + data.error);
+          } else {
+            document.getElementById("area").textContent =
+              data.area_hectares + " Ha";
+            document.getElementById("lst").textContent = data.avg_lst + " °C";
+            document.getElementById("ndti").textContent = data.avg_ndti;
+            document.getElementById("ndci").textContent = data.avg_ndci;
+            document.getElementById("mci").textContent = data.avg_mci;
+
+            badge.textContent = data.status.toUpperCase();
+
+            let color = "#95a5a6";
+            if (data.status === "Clear") color = "#27ae60";
+            else if (data.status.includes("High")) color = "#e74c3c";
+            else color = "#f1c40f";
+
+            badge.style.backgroundColor = color;
+            document.getElementById("conclusionText").innerHTML =
+              data.conclusion;
+
+            btn.innerHTML = "✅ SCAN COMPLETE";
+            setTimeout(() => {
+              btn.innerHTML = "Re-Initialize Scan";
+              btn.disabled = false;
+            }, 5000);
+          }
+        } catch (error) {
+          console.error(error);
+          btn.innerHTML = "❌ Error";
+          btn.disabled = false;
+        }
+      }
+
+      async function establishGlobalLink() {
+        const btn = document.getElementById('global-link-btn');
+        const status = document.getElementById('satellite-status');
+
+        // UI change to show processing
+        btn.innerText = "DOWNLOADING...";
+        btn.style.backgroundColor = "#cbd5e0"; 
+        btn.style.color = "#1a202c";
+
+        try {
+            // Loop through every lake in our city array and tell the backend to download the .tif files
+            for (let lake of lakes) {
+                if(lake.active) {
+                    status.innerText = "Downloading city data...";
+                    let response = await fetch("http://127.0.0.1:8000/update-satellite-data/" + lake.id);
+                    let data = await response.json();
                     
-                    badge.textContent = "DATA READY";
-                    badge.style.backgroundColor = "#2980b9"; 
-                    
-                    alert("Satellite Link Established!\nNew Sentinel-2 & Landsat-9 data acquired.\n\nPlease click 'INITIALIZE SCAN' to process.");
-                } else {
-                    alert("Error: " + data.message);
-                    resetAcquireButton(btn);
+                    if(data.status !== "success") {
+                        console.error("Failed to download data for " + lake.name);
+                    }
                 }
-            } catch (error) { 
-                console.error(error);
-                alert("Signal Lost (Backend seems offline). Is main.py running?");
-                resetAcquireButton(btn);
             }
-        }
-
-        function resetAcquireButton(btn) {
-            btn.innerHTML = "Acquire Satellite Link";
-            btn.disabled = false;
-            btn.style.background = "#1f4068"; 
-            document.getElementById("statusBadge").textContent = "TARGET LOCKED";
-        }
-
-        // BUTTON 2: INITIALIZE SCAN
-        async function fetchAnalysis() {
-            const btn = document.querySelector("#analyzeBtn");
-            const badge = document.getElementById("statusBadge");
+            // Once ALL files are successfully downloaded, unlock the dashboard!
+            satelliteLinked = true;
             
-            btn.innerHTML = "🔄 Processing...";
-            btn.disabled = true;
+            btn.innerText = "DATA SYNCED";
+            btn.style.backgroundColor = "#38a169"; 
+            btn.style.color = "white";
             
-            try {
-                const response = await fetch("http://127.0.0.1:8000/analyze/" + currentLakeId);
-                const data = await response.json();
+            status.innerText = "System Online";
+            status.style.color = "#38a169";
 
-                if (data.error) {
-                    badge.textContent = "ERROR";
-                    badge.style.backgroundColor = "#e74c3c";
-                    alert("Analysis Failed: " + data.error);
-                } else {
-                    document.getElementById("area").textContent = data.area_hectares + " Ha";
-                    document.getElementById("lst").textContent = data.avg_lst + " °C"; 
-                    document.getElementById("ndti").textContent = data.avg_ndti;
-                    document.getElementById("ndci").textContent = data.avg_ndci;
-                    document.getElementById("mci").textContent = data.avg_mci;
+            alert("City-wide satellite data successfully downloaded! You can now analyze the lakes.");
 
-                    badge.textContent = data.status.toUpperCase();
-                    
-                    let color = "#95a5a6";
-                    if (data.status === "Clear") color = "#27ae60";       
-                    else if (data.status.includes("High")) color = "#e74c3c"; 
-                    else color = "#f1c40f"; 
-
-                    badge.style.backgroundColor = color;
-                    document.getElementById("conclusionText").innerHTML = data.conclusion;
-                    
-                    btn.innerHTML = "✅ SCAN COMPLETE";
-                    setTimeout(() => { 
-                        btn.innerHTML = "Re-Initialize Scan"; 
-                        btn.disabled = false; 
-                    }, 3000);
-                }
-            } catch (error) { 
-                console.error(error); 
-                btn.innerHTML = "❌ Error";
-                btn.disabled = false;
-            }
+        } catch (error) {
+            console.error(error);
+            btn.innerText = "CONNECTION FAILED";
+            status.innerText = "Backend Offline";
+            status.style.color = "#e53e3e";
+            alert("Error: Could not connect to the Python backend. Is main.py running?");
         }
+      }
+
     </script>
-</body>
+  </body>
 </html>

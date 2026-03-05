@@ -179,3 +179,33 @@ button:hover { background: #c0392b; }
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
 }
+
+/* Master Control Panel Styles */
+#master-control-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px; /* Puts it in the top right corner */
+    width: 300px;
+    background-color: #1a202c; /* Dark theme to match your popups */
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 1000; /* Ensures it floats above the Leaflet map */
+}
+
+#global-link-btn {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#global-link-btn.active {
+    background-color: #38a169; /* Turns green when connected */
+}
