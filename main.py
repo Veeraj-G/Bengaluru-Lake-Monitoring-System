@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import rasterio
 import numpy as np
 from skimage.filters import threshold_otsu
-from rasterio.warp import reproject, Resampling  # <--- NEW IMPORT
+from rasterio.warp import reproject, Resampling
 from download_satellite import download_all
 import os
 
