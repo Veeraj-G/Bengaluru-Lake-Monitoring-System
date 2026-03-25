@@ -58,7 +58,7 @@
         <span class="standard">&lt; 0.1</span>
       </div>
       <div class="data-row">
-        <span class="label">Chlorophyll</span>
+        <span class="label">Chlorophyll Conc.</span>
         <span id="ndci" class="value">---</span>
         <span class="standard">&lt; 0.1</span>
       </div>
@@ -70,6 +70,9 @@
 
       <button onclick="fetchAnalysis()" id="analyzeBtn" style="display: none">
         Initialize Scan
+      </button>
+      <button onclick="downloadOfficialReport()" id="downloadBtn" class="btn-primary" style="display: none; background-color: #2980b9; margin-top: 15px; width: 100%;">
+        Download Report
       </button>
     </div>
 
@@ -202,6 +205,7 @@
           document.getElementById("ndti").textContent = "---";
           document.getElementById("ndci").textContent = "---";
           document.getElementById("mci").textContent = "---";
+          document.getElementById("downloadBtn").style.display = "none";
 
           if (lake.active) {
             document.getElementById("statusBadge").textContent =
@@ -262,6 +266,9 @@
             document.getElementById("conclusionText").innerHTML =
               data.conclusion;
 
+            window.currentScanData = data; // Save the live data so the PDF can use it
+            document.getElementById("downloadBtn").style.display = "block"; // Make the button visible!  
+
             btn.innerHTML = "✅ SCAN COMPLETE";
             setTimeout(() => {
               btn.innerHTML = "Re-Initialize Scan";
@@ -316,6 +323,21 @@
             status.style.color = "#e53e3e";
             alert("Error: Could not connect to the Python backend. Is main.py running?");
         }
+      }
+
+      function downloadOfficialReport() {
+        if (!window.currentScanData) return; 
+        
+        const d = window.currentScanData;
+        
+        // Encode the conclusion text so it doesn't break the web URL
+        const safeConclusion = encodeURIComponent(d.conclusion);
+        
+        // Build the API link with all the live dashboard data
+        const downloadUrl = `http://127.0.0.1:8000/api/download-report?lake_name=${d.lake_name}&area=${d.area_hectares}&ndci=${d.avg_ndci}&lst=${d.avg_lst}&ndti=${d.avg_ndti}&mci=${d.avg_mci}&status=${d.status}&conclusion=${safeConclusion}`;
+        
+        // Open the link in a new tab, triggering the PDF download!
+        window.open(downloadUrl, "_blank");
       }
 
     </script>

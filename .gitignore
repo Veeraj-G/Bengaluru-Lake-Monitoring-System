@@ -9,3 +9,16 @@ __pycache__/
 venv/
 .env
 .DS_Store
+
+# Virtual Environments
+.venv/
+env/
+
+# Satellite Data Files
+*.tif
+*.tiff
+
+# Temporary Files & Python Cache
+__pycache__/
+*.pdf
+*.png

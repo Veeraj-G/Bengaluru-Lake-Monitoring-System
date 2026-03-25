@@ -7,6 +7,9 @@ from rasterio.warp import reproject, Resampling
 from download_satellite import download_all
 import os
 
+from fastapi.responses import FileResponse
+from report_generator import create_pdf_report
+
 app = FastAPI()
 
 # Enable CORS so the Dashboard can talk to this server
@@ -216,3 +219,15 @@ def analyze_lake(lake_id: str):
         "conclusion": conclusion,
         "data_source": "Sentinel-2 & Landsat-9 (Fused)"
     }
+
+@app.get("/api/download-report")
+async def download_report(lake_name: str, area: float, ndci: float, lst: float, ndti: float, mci: float, status: str, conclusion: str):
+    """Generates the PDF and sends it to the user's browser."""
+    # We pass the new variables into the generator
+    pdf_file = create_pdf_report(lake_name, area, ndci, lst, ndti, mci, status, conclusion)
+    
+    return FileResponse(
+        path=pdf_file, 
+        filename=f"{lake_name}_Telemetry_Report.pdf", 
+        media_type='application/pdf'
+    )
