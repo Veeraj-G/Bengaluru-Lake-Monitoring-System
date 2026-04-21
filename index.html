@@ -145,32 +145,21 @@
         },
       ).addTo(map);
 
-      // --- 2. DEFINE LAKES & TRACK SELECTION ---
-      const lakes = [
-        {
-          name: "Hebbal Lake",
-          lat: 13.0456,
-          lng: 77.5833,
-          id: "hebbal",
-          active: true,
-        },
-        {
-          name: "Bellandur Lake",
-          lat: 12.936,
-          lng: 77.666,
-          id: "bellandur",
-          active: true,
-        },
-        {
-          name: "Ulsoor Lake",
-          lat: 12.983,
-          lng: 77.622,
-          id: "ulsoor",
-          active: true,
-        },
-      ];
+     const lakes = [
+  { name: "Hebbal Lake", lat: 13.0466, lng: 77.5856, id: "hebbal", active: true },
+  { name: "Bellandur Lake", lat: 12.9360, lng: 77.6660, id: "bellandur", active: true },
+  { name: "Ulsoor Lake", lat: 12.9832, lng: 77.6200, id: "ulsoor", active: true },
+  { name: "Sankey Tank", lat: 13.0093, lng: 77.5741, id: "sankey", active: true },
+  { name: "Varthur Lake", lat: 12.9463, lng: 77.7345, id: "varthur", active: true }, 
+  { name: "Madiwala Lake", lat: 12.9090, lng: 77.6185, id: "madiwala", active: true }, 
+  { name: "Jakkur Lake", lat: 13.0850, lng: 77.6113, id: "jakkur", active: true }, 
+  { name: "Agara Lake", lat: 12.9212, lng: 77.6412 , id: "agara", active: true }, 
+  { name: "Yelahanka Lake", lat: 13.1108, lng: 77.5952, id: "yelahanka", active: true }, 
+  { name: "Nagavara Lake", lat: 13.045, lng: 77.609 , id: "nagavara", active: true }, 
+];
 
       let currentLakeId = "hebbal"; // Variable to remember which lake we clicked
+      let buttonTimer = null;
 
       // --- 3. HANDLE INTERACTIONS ---
       const panel = document.getElementById("dashboardPanel");
@@ -188,40 +177,71 @@
         });
 
         marker.on("click", function () {
-          if (!satelliteLinked) {
-            alert("Please Acquire Bengaluru City Satellite Link first!");
-            return;
-          }  
+          // 1. Stop the 5-second timer if we click a new lake
+          if (buttonTimer) {
+             clearTimeout(buttonTimer);
+          }
+
           panel.classList.add("panel-visible");
           document.getElementById("lakeName").textContent = lake.name;
           currentLakeId = lake.id;
-          // 1. Reset the Analyze Button
+
+          // 2. The Smart Lock: Check if data is downloaded before enabling the button
           const aBtn = document.getElementById("analyzeBtn");
-          aBtn.innerHTML = "Initialize Scan";
-          aBtn.disabled = false;
-          // Reset to "---"
-          document.getElementById("area").textContent = "---";
-          document.getElementById("lst").textContent = "---";
-          document.getElementById("ndti").textContent = "---";
-          document.getElementById("ndci").textContent = "---";
-          document.getElementById("mci").textContent = "---";
+          if (!satelliteLinked) {
+              aBtn.innerHTML = " Awaiting Satellite Link";
+              aBtn.disabled = true;
+              aBtn.style.opacity = "0.5"; // Grays out the button
+              aBtn.style.cursor = "not-allowed";
+          } else {
+              aBtn.innerHTML = "Initialize Scan";
+              aBtn.disabled = false;
+              aBtn.style.opacity = "1.0";
+              aBtn.style.cursor = "pointer";
+          }
+
+          // 3. Reset text to "---" AND reset color to safe white
+          const safeColor = "#ecf0f1";
+          
+          const areaEl = document.getElementById("area");
+          areaEl.textContent = "---";
+          areaEl.style.color = safeColor;
+          
+          const lstEl = document.getElementById("lst");
+          lstEl.textContent = "---";
+          lstEl.style.color = safeColor;
+          
+          const ndtiEl = document.getElementById("ndti");
+          ndtiEl.textContent = "---";
+          ndtiEl.style.color = safeColor;
+          
+          const ndciEl = document.getElementById("ndci");
+          ndciEl.textContent = "---";
+          ndciEl.style.color = safeColor;
+          
+          const mciEl = document.getElementById("mci");
+          mciEl.textContent = "---";
+          mciEl.style.color = safeColor;
+
           document.getElementById("downloadBtn").style.display = "none";
 
           if (lake.active) {
-            document.getElementById("statusBadge").textContent =
-              "WATER BODY SELECTED";
-            document.getElementById("statusBadge").style.backgroundColor =
-              "#2980b9";
-            document.getElementById("conclusionText").textContent =
-              "Ready to process latest satellite imagery.";
+            document.getElementById("statusBadge").textContent = "WATER BODY SELECTED";
+            document.getElementById("statusBadge").style.backgroundColor = "#2980b9";
+            
+            // --- SMART LOCK INSIGHT TEXT ---
+            if (!satelliteLinked) {
+                document.getElementById("conclusionText").textContent = "System locked. Please acquire the global satellite link to download telemetry data.";
+            } else {
+                document.getElementById("conclusionText").textContent = "Ready to process latest satellite imagery.";
+            }
+            
             document.getElementById("insightBox").style.display = "block";
             document.getElementById("analyzeBtn").style.display = "block";
           } else {
             document.getElementById("statusBadge").textContent = "OFFLINE";
-            document.getElementById("statusBadge").style.backgroundColor =
-              "#95a5a6";
-            document.getElementById("conclusionText").textContent =
-              "Data currently unavailable for this water body.";
+            document.getElementById("statusBadge").style.backgroundColor = "#95a5a6";
+            document.getElementById("conclusionText").textContent = "Data currently unavailable for this water body.";
             document.getElementById("insightBox").style.display = "block";
             document.getElementById("analyzeBtn").style.display = "none";
           }
@@ -248,12 +268,35 @@
             badge.style.backgroundColor = "#e74c3c";
             alert("Analysis Failed: " + data.error);
           } else {
-            document.getElementById("area").textContent =
-              data.area_hectares + " Ha";
-            document.getElementById("lst").textContent = data.avg_lst + " °C";
-            document.getElementById("ndti").textContent = data.avg_ndti;
-            document.getElementById("ndci").textContent = data.avg_ndci;
-            document.getElementById("mci").textContent = data.avg_mci;
+          
+            // Define standard and warning colors
+            const safeColor = "#ecf0f1"; // Standard dashboard white/gray
+            const dangerColor = "#e74c3c"; // Warning Red
+            
+            // Area
+            const areaEl = document.getElementById("area");
+            areaEl.textContent = data.area_hectares + " Ha";
+            areaEl.style.color = data.area_hectares < 10.0 ? dangerColor : safeColor;
+
+            // Temperature (LST)
+            const lstEl = document.getElementById("lst");
+            lstEl.textContent = data.avg_lst + " °C";
+            lstEl.style.color = data.avg_lst > 30.0 ? dangerColor : safeColor;
+
+            // Turbidity (NDTI)
+            const ndtiEl = document.getElementById("ndti");
+            ndtiEl.textContent = data.avg_ndti;
+            ndtiEl.style.color = data.avg_ndti > 0.05 ? dangerColor : safeColor;
+
+            // Chlorophyll (NDCI)
+            const ndciEl = document.getElementById("ndci");
+            ndciEl.textContent = data.avg_ndci;
+            ndciEl.style.color = data.avg_ndci > 0.08 ? dangerColor : safeColor;
+
+            // Algal Bloom (MCI)
+            const mciEl = document.getElementById("mci");
+            mciEl.textContent = data.avg_mci;
+            mciEl.style.color = data.avg_mci > 0.005 ? dangerColor : safeColor;
 
             badge.textContent = data.status.toUpperCase();
 
@@ -270,7 +313,7 @@
             document.getElementById("downloadBtn").style.display = "block"; // Make the button visible!  
 
             btn.innerHTML = "✅ SCAN COMPLETE";
-            setTimeout(() => {
+            buttonTimer = setTimeout(() => {
               btn.innerHTML = "Re-Initialize Scan";
               btn.disabled = false;
             }, 5000);
@@ -290,21 +333,24 @@
         btn.innerText = "DOWNLOADING...";
         btn.style.backgroundColor = "#cbd5e0"; 
         btn.style.color = "#1a202c";
+        status.innerText = "Establishing uplink...";
 
         try {
-            // Loop through every lake in our city array and tell the backend to download the .tif files
-            for (let lake of lakes) {
-                if(lake.active) {
-                    status.innerText = "Downloading city data...";
-                    let response = await fetch("http://127.0.0.1:8000/update-satellite-data/" + lake.id);
-                    let data = await response.json();
-                    
-                    if(data.status !== "success") {
-                        console.error("Failed to download data for " + lake.name);
-                    }
-                }
-            }
-            // Once ALL files are successfully downloaded, unlock the dashboard!
+            // Create an array of simultaneous download requests for all active lakes
+            const downloadPromises = lakes.filter(l => l.active).map(lake => {
+                return fetch("http://127.0.0.1:8000/update-satellite-data/" + lake.id)
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.status !== "success") {
+                            console.error("Failed to download data for " + lake.name);
+                        }
+                    });
+            });
+
+            // Fire them ALL at the exact same time
+            await Promise.all(downloadPromises);
+
+            // Once the downloads finish, update global status
             satelliteLinked = true;
             
             btn.innerText = "DATA SYNCED";
@@ -314,6 +360,15 @@
             status.innerText = "System Online";
             status.style.color = "#38a169";
 
+            // If a lake panel is currently open, instantly unlock its Analyze button!
+            const aBtn = document.getElementById("analyzeBtn");
+            if (aBtn && aBtn.disabled && currentLakeId) {
+                aBtn.innerHTML = "Initialize Scan";
+                aBtn.disabled = false;
+                aBtn.style.opacity = "1.0";
+                aBtn.style.cursor = "pointer";
+            }
+
             alert("City-wide satellite data successfully downloaded! You can now analyze the lakes.");
 
         } catch (error) {
@@ -321,7 +376,6 @@
             btn.innerText = "CONNECTION FAILED";
             status.innerText = "Backend Offline";
             status.style.color = "#e53e3e";
-            alert("Error: Could not connect to the Python backend. Is main.py running?");
         }
       }
 
