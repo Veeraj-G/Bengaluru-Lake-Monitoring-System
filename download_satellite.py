@@ -20,12 +20,12 @@ def init_gee():
 def get_dynamic_dates():
     """Temporarily hardcoded to pull historical 2024 data for the presentation."""
     # To go back to live data later, just uncomment the next two lines:
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    # end_date = datetime.now().strftime('%Y-%m-%d')
+    # start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
     
     # Use these specific dates for the "Time Machine" demonstration:
-    # start_date = '2023-09-01'
-    # end_date = '2023-10-31' # Post-monsoon, usually clear skies and full lakes
+    start_date = '2024-09-01'
+    end_date = '2024-10-31' # Post-monsoon, usually clear skies and full lakes
     return start_date, end_date
 
 def download_sentinel_image(roi_point, filename):
